@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Bo's Strategy</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4D4642">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Bo Strategy">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/5968/5968263.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-master: radial-gradient(circle at 85% 5%, rgba(164, 131, 114, 0.3) 0%, transparent 65%), 
+                         radial-gradient(circle at 50% 30%, #63524B 0%, #4A3C37 65%, #332925 100%);
+            --accent-champagne: #D1C4BC; 
+            --premium-brown: #845d58; 
+            --danger-red: #7F1D1D; 
+            --glass-border: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.05), rgba(255,255,255,0.2));
+        }
+        body { background: var(--bg-master); min-height: 100vh; font-family: 'Inter', sans-serif; color: #F2EBE3; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        .safe-container { max-width: 500px; margin: 0 auto; padding: 0 24px; }
+        .today-label { font-weight: 900; font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: rgba(255,255,255,0.4); margin-bottom: 4px; display: block; }
+        .main-title { font-size: 22px; font-weight: 900; color: white; background: transparent; border: none; outline: none; width: 100%; }
+        
+        @keyframes sparkWide { 0% { border-color: rgba(255,255,255,0.4); } 50% { border-color: white; box-shadow: 0 0 30px rgba(255,255,255,0.6); } 100% { border-color: rgba(255,255,255,0.4); } }
+        .spark-moment { animation: sparkWide 0.8s ease-out; }
+        @keyframes shimmerFull { 0% { transform: translateX(-200%) skewX(-30deg); } 100% { transform: translateX(200%) skewX(-30deg); } }
+        .shimmer-moment::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); animation: shimmerFull 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards; pointer-events: none; }
+        @keyframes rippleDeep { 0% { transform: scale(1); } 50% { transform: scale(1.03); filter: brightness(1.25); } 100% { transform: scale(1); } }
+        .celebrate-moment { animation: rippleDeep 1.2s cubic-bezier(0.22, 1, 0.36, 1); }
+
+        .date-slider { display: flex; overflow-x: auto; gap: 8px; padding: 10px 0; -ms-overflow-style: none; scrollbar-width: none; scroll-behavior: smooth; }
+        .date-slider::-webkit-scrollbar { display: none; }
+        .date-item { flex-shrink: 0; text-align: center; width: 22px; transition: 0.3s; opacity: 0.15; cursor: pointer; }
+        .date-item.active { opacity: 1; transform: scale(1.1); }
+        .date-item .day-num { font-size: 13px; font-weight: 700; display: block; }
+        .date-item.active .day-num { color: var(--accent-champagne); text-shadow: 0 0 8px rgba(209, 196, 188, 0.6); }
+
+        .month-btn { flex-shrink: 0; width: 44px; height: 44px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 900; color: rgba(255,255,255,0.2); }
+        .month-btn.active { border-color: var(--accent-champagne); color: var(--accent-champagne); background: rgba(255,255,255,0.12); backdrop-filter: blur(20px); }
+        
+        .crystal-card { 
+            background: linear-gradient(145deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 45%, rgba(255,255,255,0.01) 100%);
+            border-radius: 1.6rem; padding: 8px 16px; margin-bottom: 0.55rem; backdrop-filter: blur(40px) saturate(180%);
+            border-top: 1.2px solid rgba(255, 255, 255, 0.3); border-left: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.05), 0 10px 30px rgba(0, 0, 0, 0.3);
+            position: relative; overflow: hidden;
+        }
+
+        .summary-panel { background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(40px); border-radius: 1.8rem; display: flex; align-items: center; padding: 18px 0; margin-bottom: 30px; border-top: 1.5px solid rgba(255, 255, 255, 0.4); }
+        .bubble { width: 14px; height: 14px; border: 1.2px solid rgba(255,255,255,0.4); border-radius: 50%; cursor: pointer; transition: 0.3s; }
+        .bubble.active { background: var(--accent-champagne); border-color: var(--accent-champagne); box-shadow: 0 0 15px var(--accent-champagne); }
+        
+        .mgmt-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 1.5rem; padding: 16px; margin-bottom: 12px; }
+        .mgmt-label { font-size: 8px; font-weight: 900; color: rgba(255,255,255,0.2); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 10px; display: block; }
+        
+        .glazed-dial-system { position: fixed; bottom: 20px; right: 4px; display: flex; align-items: flex-end; z-index: 7000; pointer-events: none; }
+        .heart-slider-container { 
+            width: 80px; height: 160px; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; 
+            pointer-events: auto; -ms-overflow-style: none; scrollbar-width: none;
+            mask-image: linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 25%, black 75%, transparent);
+            -webkit-overflow-scrolling: touch; touch-action: pan-y;
+        }
+        .heart-item { height: 65px; width: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; scroll-snap-align: center; transition: 0.4s; opacity: 0.2; transform: scale(0.8); }
+        .heart-item.active { opacity: 1; transform: scale(1.15); }
+        
+        .glazed-heart {
+            width: 42px; height: 42px; 
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%);
+            backdrop-filter: blur(15px) saturate(1.5);
+            border-radius: 15px; 
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3), inset 0 0 12px rgba(255,255,255,0.1);
+        }
+        .glazed-heart::before {
+            content: ""; position: absolute; inset: 0; border-radius: 15px;
+            padding: 1.2px; background: var(--glass-border);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude; -webkit-mask-composite: destination-out;
+        }
+        .glazed-heart svg { filter: drop-shadow(0 0 4px rgba(255,255,255,0.4)); color: white; }
+
+        .pop-panel {
+            margin-right: 6px; width: 210px; background: rgba(255, 255, 255, 0.005); 
+            backdrop-filter: blur(35px) saturate(100%); border-radius: 1.5rem;
+            border-top: 1px solid rgba(255,255,255,0.25); border-left: 0.5px solid rgba(255,255,255,0.05);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4); padding: 14px;
+            pointer-events: auto; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-origin: right bottom; transform: scale(0.9) translateX(20px); opacity: 0; visibility: hidden;
+        }
+        .pop-panel.show { transform: scale(1) translateX(0); opacity: 1; visibility: visible; }
+        
+        .input-glass { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.04); border-radius: 10px; padding: 8px 10px; color: white; width: 100%; outline: none; font-size: 11px; font-weight: 600; }
+        .panel-btn-main { background: #FFFFFF; color: #1a1817; font-weight: 900; font-size: 9px; border-radius: 10px; padding: 12px; width: 100%; margin-top: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        
+        .note-premium-card {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.18) 0%, rgba(132, 93, 88, 0.35) 100%);
+            backdrop-filter: blur(60px) saturate(1.8); border-radius: 1.8rem; padding: 1rem 1.4rem; width: 88%; max-width: 310px;
+            position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 15px rgba(255,255,255,0.05); overflow: hidden;
+        }
+        .note-premium-card::before {
+            content: ""; position: absolute; inset: 0; border-radius: 1.8rem; padding: 1.2px; 
+            background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.05), rgba(132, 93, 88, 0.4));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude; -webkit-mask-composite: destination-out; pointer-events: none;
+        }
+
+        .premium-input-field { background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 8px 12px; color: white; font-size: 11px; width: 100%; outline: none; transition: 0.3s; }
+        .premium-input-field:focus { background: rgba(132, 93, 88, 0.15); border-color: var(--premium-brown); }
+        .premium-label { font-size: 8px; font-weight: 800; color: rgba(255, 255, 255, 0.4); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 4px; display: block; }
+        .btn-premium-save { background: linear-gradient(135deg, var(--premium-brown), #6d4c47); color: white; font-weight: 900; font-size: 10px; border-radius: 14px; padding: 11px; width: 100%; transition: 0.3s; box-shadow: 0 6px 15px rgba(132, 93, 88, 0.2); }
+        .btn-premium-cancel { background: rgba(255, 255, 255, 0.05); color: rgba(255,255,255,0.4); font-weight: 700; font-size: 9px; border-radius: 14px; padding: 11px; width: 100%; }
+
+        .trash-icon { color: var(--danger-red); width: 16px; height: 16px; cursor: pointer; }
+        .sure-text { color: var(--danger-red); font-weight: 900; font-size: 8px; animation: pulseSure 0.8s infinite; }
+        @keyframes pulseSure { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        
+        .title-wrap { display: flex; flex-direction: column; flex: 1; overflow: hidden; cursor: pointer; }
+        .task-title-display { font-size: 14px; font-weight: 900; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .task-subtitle-display { font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.4); margin-top: -1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .note-trigger.active { opacity: 1 !important; color: var(--accent-champagne); }
+    </style>
+</head>
+<body class="pb-96 pt-10">
+    <div id="transferModal" class="fixed inset-0 bg-black/85 backdrop-blur-xl z-[8000] hidden items-center justify-center p-6"><div class="note-box bg-[#2A2624] border border-white/10 rounded-[2.2rem] p-7 w-full max-sm"><span id="transferTypeLabel" class="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] mb-1 block">Data Transfer</span><h3 id="transferTitle" class="text-xl font-black text-white">數據處理</h3><p id="transferDesc" class="text-[10px] text-white/40 mt-2 mb-4 leading-relaxed"></p><textarea id="transferTextArea" class="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-[#D1C4BC] text-[10px] font-mono outline-none mb-4 h-48"></textarea><div class="flex gap-3"><button onclick="closeTransferModal()" class="flex-1 py-4 rounded-xl bg-white/5 text-[10px] font-black text-white">CANCEL</button><button id="transferActionBtn" class="flex-1 py-4 rounded-xl bg-[#D1C4BC] text-[#1a1817] text-[10px] font-black"></button></div></div></div>
+
+    <div id="noteModal" class="fixed inset-0 bg-white/5 backdrop-blur-md z-[6000] hidden items-center justify-center p-6 transition-all duration-300">
+        <div class="note-premium-card">
+            <span class="premium-label text-center">Plan Tuning</span>
+            <h3 class="text-lg font-black text-white mb-5 text-center">編輯目標計劃</h3>
+            <div class="space-y-3.5">
+                <div><span class="premium-label">計畫主標題</span><input type="text" id="noteTaskName" class="premium-input-field" placeholder="主標題"></div>
+                <div><span class="premium-label">計畫子標題內容</span><input type="text" id="noteSubtitle" class="premium-input-field" placeholder="子標題"></div>
+                <div><span class="premium-label">今天狀態備注 (Log)</span><textarea id="noteField" class="premium-input-field h-14" placeholder="今天的心得..."></textarea></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><span class="premium-label">大領域分類</span><select id="noteCatSelect" class="premium-input-field"></select></div>
+                    <div><span class="premium-label">計畫類型</span><select id="noteTypeSelect" class="premium-input-field"><option value="daily">每日原子</option><option value="weekly">每週計畫</option><option value="annual">年度計畫</option></select></div>
+                </div>
+                <div><span class="premium-label">目標指標數 (Target)</span><input type="number" id="noteTargetQty" class="premium-input-field" placeholder="總次數"></div>
+            </div>
+            <div class="flex flex-col gap-2 mt-6"><button onclick="saveNote()" class="btn-premium-save">SAVE CHANGES</button><button onclick="closeNote()" class="btn-premium-cancel">CANCEL</button></div>
+        </div>
+    </div>
+
+    <div class="safe-container">
+        <header class="mb-6"><span id="topTodayDate" class="today-label"></span><div class="flex justify-between items-end gap-4"><div class="flex-1"><input type="text" id="boTitle" class="main-title" oninput="saveTitle()" placeholder="年度計劃主題"></div><div class="flex items-center gap-3 mb-2 shrink-0"><span class="text-[8px] font-black text-white/30 uppercase tracking-widest">年度達成總率</span><span id="annualRate" class="text-[20px] font-black text-[#D1C4BC]">0%</span></div></div></header>
+        <div class="date-slider no-scrollbar" id="dateSlider"></div>
+        <div class="flex overflow-x-auto gap-3 mb-6 no-scrollbar" id="monthNav"></div>
+        <div class="summary-panel">
+            <div class="flex-1 border-r border-white/10 text-center"><p class="text-[8px] font-black text-white/30 uppercase mb-1 tracking-widest">本週進度</p><p id="weekRate" class="text-[18px] font-black text-white">0%</p></div>
+            <div class="flex-1 border-r border-white/10 text-center"><p class="text-[8px] font-black text-white/30 uppercase mb-1 tracking-widest">月完成率</p><p id="monthRate" class="text-[18px] font-black text-white">0%</p></div>
+            <div class="flex-1 text-center"><p class="text-[8px] font-black text-white/30 uppercase mb-1 tracking-widest">瀏覽月份</p><p id="goalDisplay" class="text-[18px] font-black text-white"></p></div>
+        </div>
+        <main id="taskList" class="space-y-2.5"></main>
+        
+        <details id="mgmtDetails" class="mt-20">
+            <summary class="py-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center gap-2 text-[10px] font-black text-white/30 uppercase tracking-widest cursor-pointer">管理中心</summary>
+            <div class="mt-6 space-y-4">
+                <div class="mgmt-card">
+                    <span class="mgmt-label">AI 分析紀錄復盤專區</span>
+                    <button id="aiExportBtn" onclick="exportData()" class="w-full bg-white/5 border border-white/10 text-white/60 text-[10px] font-black py-4 rounded-xl transition-all">複製數據貼給AI分析建議</button>
+                </div>
+                <div class="mgmt-card"><span class="mgmt-label">數據檔案庫</span><div id="archivedTasksList" class="mb-2"></div><div id="archivedCatsList"></div></div>
+                <div class="mgmt-card">
+                    <span class="mgmt-label">備份檔案紀錄與遷移手機</span>
+                    <div id="backupAlert" class="text-[9px] font-black text-[#D1C4BC] mb-3 hidden uppercase tracking-wider">⚠️ 建議進行手動備份：距離上次備份已超過 7 天</div>
+                    
+                    <div class="flex flex-col gap-2">
+                        <button onclick="exportFullBackup()" class="w-full bg-[#D1C4BC] text-[#1a1817] text-[10px] font-black py-4 rounded-xl shadow-lg leading-snug">建立完整備份代碼 (匯出)</button>
+                        <button onclick="openImportModal()" class="w-full bg-white/5 border border-white/10 text-white/50 text-[10px] font-black py-4 rounded-xl">貼上備份代碼匯入 (新機)</button>
+                        <div id="restoreArea" class="hidden">
+                            <button id="restoreBtn" onclick="restoreBackup()" class="w-full bg-[#D1C4BC]/10 border border-[#D1C4BC]/30 text-[#D1C4BC] text-[10px] font-black py-3 rounded-xl transition-all"></button>
+                            <p id="undoTimeLabel" class="text-center text-[8px] text-white/20 mt-1 uppercase tracking-widest"></p>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-center text-[7px] text-white/10 py-4 tracking-[0.3em]">VERSION 55.1.1 · 7-DAY BACKUP ALERT</p>
+            </div>
+        </details>
+
+        <div class="glazed-dial-system">
+            <div id="dockPanel" class="pop-panel"><div id="panelContent"></div></div>
+            <div class="heart-slider-container" id="heartSlider">
+                <div class="heart-item" style="height: 50px;"></div>
+                <div class="heart-item" data-mode="category" onclick="handleHeartClick('category')">
+                    <div class="glazed-heart"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>
+                    <span class="text-[8px] font-black mt-2 text-white/30 tracking-widest">CAT</span>
+                </div>
+                <div class="heart-item" data-mode="add" onclick="handleHeartClick('add')">
+                    <div class="glazed-heart"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L13.8 9.3L21 11L13.8 12.7L12 20L10.2 12.7L3 11L10.2 9.3L12 2Z"/></svg></div>
+                    <span class="text-[8px] font-black mt-2 text-white/30 tracking-widest">ADD</span>
+                </div>
+                <div class="heart-item" style="height: 50px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <script>
+        // 切換為全新金鑰，確保數據隔離
+        const KEY = 'bo_strategy_pure_v1'; 
+        const MONTHS_EN = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        
+        // 初始純淨數據設定
+        let categories = JSON.parse(localStorage.getItem(KEY+'_cats')) || [{id:'c1', title:'核心目標 CORE'}];
+        let habits = JSON.parse(localStorage.getItem(KEY+'_tasks')) || [];
+        let archivedCats = JSON.parse(localStorage.getItem(KEY+'_arch_cats')) || [];
+        let archivedHabits = JSON.parse(localStorage.getItem(KEY+'_arch_tasks')) || [];
+        let history = JSON.parse(localStorage.getItem(KEY+'_hist')) || {};
+        let notes = JSON.parse(localStorage.getItem(KEY+'_notes')) || {};
+        let titleVal = localStorage.getItem(KEY+'_title') || "", currentEditingTaskId = "", newlyAchievedId = null, lastClick = 0;
+        let lastTriggerLevel = "";
+
+        let nowTime = new Date();
+        let viewingYear = nowTime.getFullYear(); 
+        let viewingMonth = nowTime.getMonth() + 1;
+        let selectedDate = new Date();
+        
+        let taskDelIdx = -1, catDelIdx = -1, mainTaskArchiveId = -1, panelCatArchiveId = -1;
+        let currentMode = null, panelOpen = false;
+
+        const trashSVG = '<svg class="trash-icon inline-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>';
+
+        function getDKey(date) { const d = new Date(date); return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')}`; }
+        
+        function checkTriggerLogic(id, oldRaw, newRaw, target) {
+            const oldRate = Math.round((oldRaw / target) * 100);
+            const newRate = Math.round((newRaw / target) * 100);
+            if (newRate >= 100 && oldRate < 100) { newlyAchievedId = id; lastTriggerLevel = "100"; }
+            else if (newRate >= 60 && oldRate < 60) { newlyAchievedId = id; lastTriggerLevel = "60"; }
+            else if (newRate >= 30 && oldRate < 30) { newlyAchievedId = id; lastTriggerLevel = "30"; }
+        }
+
+        function init() {
+            habits.forEach(h => { if(!h.id) h.id = 't_' + Math.random().toString(36).substr(2, 9); });
+            document.getElementById('topTodayDate').innerText = getDKey(new Date()).replace(/-/g, '.');
+            document.getElementById('boTitle').value = titleVal;
+            
+            checkRestoreState();
+            checkBackupReminder();
+            render(); renderCatManager(); renderMonths(); renderDateSlider(); initDialObserver();
+            setTimeout(() => {
+                const slider = document.getElementById('heartSlider');
+                if(slider) { slider.scrollTo({ top: 0, behavior: 'smooth' }); slider.dispatchEvent(new Event('scroll')); }
+            }, 300);
+        }
+
+        function checkBackupReminder() {
+            const lastExport = localStorage.getItem(KEY + '_last_export');
+            const alertEl = document.getElementById('backupAlert');
+            if (!lastExport) {
+                alertEl.innerText = "⚠️ 尚未進行過手動備份，建議立即備份數據並寄至 Mail";
+                alertEl.classList.remove('hidden');
+                return;
+            }
+            const diff = Date.now() - parseInt(lastExport);
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            if (days >= 7) {
+                alertEl.innerText = `⚠️ 建議手動備份：距離上次備份已過 ${days} 天`;
+                alertEl.classList.remove('hidden');
+            } else {
+                alertEl.classList.add('hidden');
+            }
+        }
+
+        function checkRestoreState() {
+            const undoData = localStorage.getItem(KEY + '_undo');
+            const undoTime = localStorage.getItem(KEY + '_undo_time') || "未知";
+            const restoreArea = document.getElementById('restoreArea');
+            const restoreBtn = document.getElementById('restoreBtn');
+            const mgmt = document.getElementById('mgmtDetails');
+            
+            if (undoData) { 
+                restoreArea.classList.remove('hidden'); 
+                restoreBtn.innerText = "↺ 恢復至上一版本數據";
+                document.getElementById('undoTimeLabel').innerText = `快照時間: ${undoTime}`;
+                if (sessionStorage.getItem('bo_just_restored')) {
+                    restoreBtn.innerText = "恢復成功 ✨";
+                    restoreBtn.style.color = "#D1C4BC";
+                    mgmt.open = true;
+                    setTimeout(() => { 
+                        restoreBtn.innerText = "↺ 切換回原先版本"; 
+                        restoreBtn.style.color = "";
+                        sessionStorage.removeItem('bo_just_restored');
+                    }, 5000);
+                }
+                if(sessionStorage.getItem('bo_just_imported')) { mgmt.open = true; sessionStorage.removeItem('bo_just_imported'); }
+            } else { restoreArea.classList.add('hidden'); }
+        }
+
+        function restoreBackup() {
+            const undoData = localStorage.getItem(KEY + '_undo');
+            if (!undoData) return;
+            const current = { c: localStorage.getItem(KEY+'_cats'), t: localStorage.getItem(KEY+'_tasks'), h: localStorage.getItem(KEY+'_hist'), n: localStorage.getItem(KEY+'_notes'), l: localStorage.getItem(KEY+'_title') };
+            try {
+                const d = JSON.parse(undoData);
+                localStorage.setItem(KEY + '_undo', JSON.stringify(current));
+                localStorage.setItem(KEY + '_undo_time', new Date().toLocaleTimeString());
+                localStorage.setItem(KEY+'_cats', d.c); localStorage.setItem(KEY+'_tasks', d.t);
+                localStorage.setItem(KEY+'_hist', d.h); localStorage.setItem(KEY+'_notes', d.n);
+                localStorage.setItem(KEY+'_title', d.l);
+                sessionStorage.setItem('bo_just_restored', 'true');
+                sessionStorage.setItem('bo_just_imported', 'true'); 
+                location.reload();
+            } catch(e) { alert("❌ 恢復失敗。"); }
+        }
+
+        function initDialObserver() {
+            const slider = document.getElementById('heartSlider'); if(!slider) return;
+            slider.addEventListener('scroll', () => {
+                let activeMode = null;
+                slider.querySelectorAll('.heart-item[data-mode]').forEach(item => {
+                    const rect = item.getBoundingClientRect();
+                    const sliderRect = slider.getBoundingClientRect();
+                    const center = sliderRect.top + sliderRect.height / 2;
+                    if (Math.abs(rect.top + rect.height/2 - center) < 35) { item.classList.add('active'); activeMode = item.getAttribute('data-mode'); }
+                    else { item.classList.remove('active'); }
+                });
+                if (activeMode && activeMode !== currentMode) { currentMode = activeMode; openPanel(activeMode); }
+            });
+        }
+
+        function handleHeartClick(mode) { if (panelOpen && currentMode === mode) { closePanel(); } else { openPanel(mode); } }
+        function openPanel(mode) {
+            const panel = document.getElementById('dockPanel'), content = document.getElementById('panelContent');
+            panelOpen = true; panel.classList.add('show');
+            if (mode === 'category') {
+                content.innerHTML = `<span class="mgmt-label" style="opacity: 0.3; margin-bottom: 12px;">新增領域</span><div id="panelCatList" class="max-h-52 overflow-y-auto mb-4 space-y-2 no-scrollbar"></div><div class="flex gap-2"><input type="text" id="panelNewCatName" placeholder="新領域..." class="input-glass flex-1"><button onclick="addCatFromPanel()" class="w-10 bg-white rounded-xl text-black font-black">+</button></div>`;
+                setTimeout(renderPanelCats, 0);
+            } else {
+                content.innerHTML = `<span class="mgmt-label" style="opacity: 0.3; margin-bottom: 12px;">新增小目標</span><div class="space-y-3"><select id="panelCatSelect" class="input-glass">${categories.map(c => `<option value="${c.id}">${c.title}</option>`).join('')}</select><input type="text" id="panelTaskName" placeholder="計畫內容..." class="input-glass"><div class="grid grid-cols-2 gap-2"><select id="panelTaskType" class="input-glass"><option value="daily">每日原子</option><option value="weekly">每週計畫</option><option value="annual">年度計畫</option></select><div><input type="number" id="panelTaskQty" placeholder="次數" class="input-glass text-center"></div></div><button onclick="addTaskFromPanel()" class="panel-btn-main">SAVE MISSION</button></div>`;
+            }
+        }
+        function closePanel() { document.getElementById('dockPanel').classList.remove('show'); panelOpen = false; }
+        function closeTransferModal() { document.getElementById('transferModal').classList.add('hidden'); document.getElementById('transferModal').classList.remove('flex'); }
+
+        function exportFullBackup() {
+            const b = { c: localStorage.getItem(KEY+'_cats'), t: localStorage.getItem(KEY+'_tasks'), h: localStorage.getItem(KEY+'_hist'), n: localStorage.getItem(KEY+'_notes'), l: localStorage.getItem(KEY+'_title') };
+            const s = btoa(encodeURIComponent(JSON.stringify(b)));
+            document.getElementById('transferTypeLabel').innerText = "EXPORT";
+            document.getElementById('transferTitle').innerText = "數據備份代碼";
+            document.getElementById('transferDesc').innerText = "💡 建議將代碼寄到 Mail 備存，以免通訊軟體字數限字導致編碼截斷損壞。代碼已複製。";
+            document.getElementById('transferTextArea').value = s;
+            document.getElementById('transferTextArea').readOnly = true;
+            
+            const actionBtn = document.getElementById('transferActionBtn');
+            actionBtn.innerText = "COPY ALL";
+            actionBtn.onclick = () => { 
+                document.getElementById('transferTextArea').select(); 
+                document.execCommand('copy'); 
+                localStorage.setItem(KEY + '_last_export', Date.now().toString()); 
+                checkBackupReminder();
+                closeTransferModal(); 
+            };
+            
+            document.getElementById('transferModal').classList.remove('hidden'); document.getElementById('transferModal').classList.add('flex');
+            navigator.clipboard.writeText(s).catch(() => {});
+        }
+
+        function openImportModal() {
+            document.getElementById('transferTypeLabel').innerText = "IMPORT";
+            document.getElementById('transferTitle').innerText = "匯入數據";
+            document.getElementById('transferDesc').innerText = "💡 貼上備份代碼以恢復。匯入前將自動備份，匯入後仍保有恢復上一版的選項。";
+            document.getElementById('transferTextArea').value = "";
+            document.getElementById('transferTextArea').readOnly = false;
+            const actionBtn = document.getElementById('transferActionBtn');
+            actionBtn.innerText = "START IMPORT";
+            actionBtn.onclick = () => {
+                const s = document.getElementById('transferTextArea').value.trim();
+                try {
+                    const d = JSON.parse(decodeURIComponent(atob(s)));
+                    const backup = { c: localStorage.getItem(KEY+'_cats'), t: localStorage.getItem(KEY+'_tasks'), h: localStorage.getItem(KEY+'_hist'), n: localStorage.getItem(KEY+'_notes'), l: localStorage.getItem(KEY+'_title') };
+                    localStorage.setItem(KEY + '_undo', JSON.stringify(backup));
+                    localStorage.setItem(KEY + '_undo_time', new Date().toLocaleTimeString());
+                    sessionStorage.setItem('bo_just_imported', 'true');
+                    localStorage.setItem(KEY+'_cats', d.c); localStorage.setItem(KEY+'_tasks', d.t); localStorage.setItem(KEY+'_hist', d.h); localStorage.setItem(KEY+'_notes', d.n); localStorage.setItem(KEY+'_title', d.l);
+                    location.reload();
+                } catch(e) { alert("❌ 格式錯誤。"); }
+            };
+            document.getElementById('transferModal').classList.remove('hidden'); document.getElementById('transferModal').classList.add('flex');
+        }
+
+        function getAnnualDone(id) { let t = 0; Object.keys(history).forEach(k => { if(k.startsWith(viewingYear.toString()) && history[k]?.[id]) t += history[k][id]; }); return t; }
+        function getWeeklyDone(id) { const curr = new Date(selectedDate), day = curr.getDay(), diff = curr.getDate() - (day === 0 ? 6 : day - 1), mon = new Date(new Date(selectedDate).setDate(diff)); let t = 0; for(let i=0; i<7; i++){ const dK = getDKey(new Date(new Date(mon).setDate(mon.getDate() + i))); t += history[dK]?.[id] || 0; } return t; }
+
+        function render() {
+            const dK = getDKey(selectedDate), list = document.getElementById('taskList'); list.innerHTML = '';
+            document.getElementById('goalDisplay').innerText=`${viewingYear}.${viewingMonth.toString().padStart(2,'0')}`;
+            categories.forEach(cat => {
+                let filtered = habits.filter(h => h.cid === cat.id); if (filtered.length === 0) return;
+                let sectionHTML = `<section><div class="text-[15px] font-black text-white/70 mb-3 pl-1">${cat.title}</div>`;
+                filtered.forEach(h => {
+                    const raw = h.type === 'annual' ? getAnnualDone(h.id) : (h.type === 'daily' ? (history[dK]?.[h.id] || 0) : getWeeklyDone(h.id));
+                    const rate = Math.min(100, Math.round((raw / h.target) * 100)); 
+                    const rateDisplay = rate >= 100 ? `${rate}% ✨` : `${rate}%`;
+                    let celClass = '';
+                    if (h.id === newlyAchievedId) {
+                        if (lastTriggerLevel === "100") { celClass = 'celebrate-moment'; triggerSuccessFX(); }
+                        else if (lastTriggerLevel === "60") celClass = 'shimmer-moment';
+                        else if (lastTriggerLevel === "30") celClass = 'spark-moment';
+                        newlyAchievedId = null; lastTriggerLevel = "";
+                    }
+                    sectionHTML += `<div class="crystal-card ${celClass}">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center flex-1 overflow-hidden">
+                                ${h.type==='daily' ? `<div class="w-7 h-7 border-2 border-white/20 rounded-full flex items-center justify-center mr-3 ${raw > 0 ? 'bg-[#D1C4BC] border-[#D1C4BC]' : ''}" onclick="toggleDaily('${h.id}')">${raw >= 1 ? '<svg class="w-3.5 h-3.5 text-stone-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="6"><path d="M5 13l4 4L19 7"></path></svg>' : (raw > 0 ? '<div class="w-1.5 h-1.5 bg-stone-900 rounded-full"></div>' : '')}</div>` : ''}
+                                <div class="title-wrap" onclick="openNote('${h.id}')">
+                                    <span class="task-title-display">${h.name}</span>
+                                    ${h.subtitle ? `<span class="task-subtitle-display">${h.subtitle}</span>` : ''}
+                                </div>
+                                <div onclick="openNote('${h.id}')" class="note-trigger ${notes[h.id]?'active':''} opacity-20 cursor-pointer p-1 ml-1"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></div>
+                            </div><div onclick="archiveTask('${h.id}')" class="${mainTaskArchiveId === h.id ? 'sure-text' : 'opacity-10 text-[10px] pl-3'}">${mainTaskArchiveId === h.id ? 'SURE?' : '✕'}</div>
+                        </div>
+                        <div class="mt-0.5 ${h.type==='daily' ? 'pl-[40px]' : 'pl-0'}"><p class="text-[8px] font-black text-white/20 uppercase tracking-[0.12em]">${h.type==='daily'?'每日原子':(h.type==='annual'?'年度計畫':'每週計畫')}</p></div>
+                        ${h.type==='weekly' ? `<div class="flex flex-wrap gap-1.5 mt-3">${Array.from({length: h.target}, (_,i)=>i+1).map(n => `<div class="bubble ${raw>=n?'active':''}" onclick="setWeekly('${h.id}', ${n})"></div>`).join('')}</div>` : ''}
+                        ${h.type==='annual' ? `<div class="flex items-center gap-3 mt-3 bg-white/5 p-2 rounded-xl"><button onclick="changeAnnual('${h.id}',-1)" class="w-6 h-6">-</button><div class="flex-1 text-center font-black text-xs">${Math.floor(raw)}<span class="opacity-20 mx-1">/</span>${h.target}</div><button onclick="changeAnnual('${h.id}',1)" class="w-6 h-6">+</button></div>` : ''}
+                        <div class="flex justify-between items-center mt-2.5 pt-2 border-t border-white/5"><div class="flex gap-3 text-[9px] font-bold text-white/20"><span>目標 ${h.target}</span><span>完成 ${Math.floor(raw)}</span><span>剩餘 ${Math.max(0, h.target - Math.floor(raw))}</span></div><div class="text-[10px] font-black ${rate>=100?'text-[#D1C4BC]':'text-white/40'}">${rateDisplay}</div></div>
+                    </div>`;
+                }); list.innerHTML += sectionHTML + `</section>`;
+            }); updateSummary();
+        }
+
+        function updateSummary() {
+            const activeHabits = habits.filter(h => categories.some(c => c.id === h.cid));
+            let totalDoneWeight = 0, totalTargetWeight = 0;
+            const isLeap = (viewingYear % 4 === 0 && viewingYear % 100 !== 0) || (viewingYear % 400 === 0);
+            const daysInYear = isLeap ? 366 : 365;
+            activeHabits.forEach(h => {
+                const annualDone = getAnnualDone(h.id);
+                if (h.type === 'daily') { totalDoneWeight += annualDone; totalTargetWeight += h.target * daysInYear; } 
+                else if (h.type === 'weekly') { totalDoneWeight += annualDone; totalTargetWeight += h.target * 52; } 
+                else if (h.type === 'annual') { totalDoneWeight += Math.min(h.target, annualDone); totalTargetWeight += h.target; }
+            });
+            const annualRateVal = totalTargetWeight > 0 ? Math.min(100, Math.round((totalDoneWeight / totalTargetWeight) * 100)) : 0;
+            document.getElementById('annualRate').innerText = annualRateVal >= 100 ? '100% ✨' : annualRateVal + '%';
+            const mPrefix = `${viewingYear}-${viewingMonth.toString().padStart(2,'0')}`;
+            let mDoneCount = 0, mTargetTotal = 0;
+            const daysInMonth = new Date(viewingYear, viewingMonth, 0).getDate();
+            activeHabits.forEach(h => {
+                if (h.type === 'daily') { mTargetTotal += h.target * daysInMonth; Object.keys(history).forEach(k => { if (k.startsWith(mPrefix)) mDoneCount += history[k][h.id] || 0; }); } 
+                else if (h.type === 'weekly') { mTargetTotal += h.target * (daysInMonth / 7); Object.keys(history).forEach(k => { if (k.startsWith(mPrefix)) mDoneCount += history[k][h.id] || 0; }); }
+            });
+            const monthRateVal = mTargetTotal > 0 ? Math.min(100, Math.round((mDoneCount/mTargetTotal)*100)) : 0;
+            document.getElementById('monthRate').innerText = monthRateVal >= 100 ? '100% ✨' : monthRateVal + '%';
+            let wRatioSum = 0; 
+            activeHabits.forEach(h => { 
+                const weeklyDone = getWeeklyDone(h.id); let weeklyGoal = h.target; 
+                if (h.type === 'daily') weeklyGoal = 7; else if (h.type === 'annual') weeklyGoal = Math.max(0.1, h.target / 52);
+                wRatioSum += Math.min(1, weeklyDone / weeklyGoal); 
+            });
+            const weekRateVal = activeHabits.length > 0 ? Math.round((wRatioSum / activeHabits.length) * 100) : 0;
+            document.getElementById('weekRate').innerText = weekRateVal + '%';
+        }
+
+        function renderDateSlider() { const s = document.getElementById('dateSlider'); if(!s) return; s.innerHTML=''; const days = new Date(viewingYear, viewingMonth, 0).getDate(); for(let i=1; i<=days; i++) { let d = new Date(viewingYear, viewingMonth-1, i); const isActive = getDKey(d) === getDKey(selectedDate); s.innerHTML += `<div id="date-${i}" class="date-item ${isActive?'active':''}" onclick="selectDate('${d.toISOString()}')"><span class="day-num">${i}</span></div>`; } setTimeout(() => { const activeEl = s.querySelector('.active'); if(activeEl) activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center' }); }, 100); }
+        function selectDate(iso) { selectedDate = new Date(iso); renderDateSlider(); render(); }
+        function renderMonths() { const mNav = document.getElementById('monthNav'); if(mNav) mNav.innerHTML = MONTHS_EN.map((m,i)=>`<div class="month-btn ${i+1===viewingMonth?'active':''}" onclick="setMonth(${i+1})">${m}</div>`).join(''); }
+        function setMonth(m) { viewingMonth=m; selectedDate=new Date(viewingYear,m-1,1); renderMonths(); renderDateSlider(); render(); }
+        function renderCatManager() {
+            const archCats = document.getElementById('archivedCatsList'), archTasks = document.getElementById('archivedTasksList');
+            if(archCats) archCats.innerHTML = archivedCats.map((c, i) => `<div class="flex justify-between items-center py-2 border-b border-white/5"><span class="text-[10px] text-white/20">${c.title}</span><div class="flex gap-4"><button onclick="restoreCat(${i})" class="text-[8px] text-[#D1C4BC]">還原</button><div onclick="hardDeleteCat(${i})" class="cursor-pointer">${catDelIdx === i ? '<span class="sure-text">SURE?</span>' : trashSVG}</div></div></div>`).join('');
+            if(archTasks) archTasks.innerHTML = archivedHabits.map((h, i) => `<div class="flex justify-between items-center py-2 border-b border-white/5"><span class="text-[10px] text-white/20">${h.name}</span><div class="flex gap-4"><button onclick="restoreTask(${i})" class="text-[8px] text-[#D1C4BC]">還原</button><div onclick="hardDeleteTask(${i})" class="cursor-pointer">${taskDelIdx === i ? '<span class="sure-text">SURE?</span>' : trashSVG}</div></div></div>`);
+        }
+        function renderPanelCats() { const list = document.getElementById('panelCatList'); if(!list) return; list.innerHTML = categories.map(c => `<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><input type="text" value="${c.title}" onblur="renameCat('${c.id}', this.value)" class="bg-transparent text-[12px] font-bold text-white outline-none w-2/3"><div onclick="archiveCat('${c.id}')" class="${panelCatArchiveId === c.id ? 'sure-text' : 'opacity-20 text-[10px]'}">${panelCatArchiveId === c.id ? 'SURE?' : '✕'}</div></div>`); }
+        function addCatFromPanel() { const n = document.getElementById('panelNewCatName').value.trim(); if(n) { categories.push({id:'c_'+Date.now(), title:n}); save(); document.getElementById('panelNewCatName').value=''; renderPanelCats(); } }
+        function addTaskFromPanel() { const n = document.getElementById('panelTaskName').value.trim(), c = document.getElementById('panelCatSelect').value, t = document.getElementById('panelTaskType').value, q = parseInt(document.getElementById('panelTaskQty').value) || 1; if(n) { habits.push({id:'t_'+Date.now(), name:n, subtitle:'', cid:c, type:t, target:(t === 'daily' ? 1 : q)}); save(); closePanel(); } }
+        function archiveCat(cid) { if (panelCatArchiveId === cid) { const idx = categories.findIndex(c => c.id === cid); if(idx > -1) { archivedCats.push(categories.splice(idx, 1)[0]); panelCatArchiveId = -1; save(); renderCatManager(); renderPanelCats(); } } else { panelCatArchiveId = cid; renderPanelCats(); setTimeout(() => { panelCatArchiveId = -1; renderPanelCats(); }, 3000); } }
+        function archiveTask(id) { if (mainTaskArchiveId === id) { const idx = habits.findIndex(h => h.id === id); if(idx > -1) { archivedHabits.push(habits.splice(idx, 1)[0]); mainTaskArchiveId = -1; save(); renderCatManager(); } } else { mainTaskArchiveId = id; render(); setTimeout(() => { mainTaskArchiveId = -1; render(); }, 3000); } }
+        function hardDeleteCat(i) { if(catDelIdx === i) { archivedCats.splice(i, 1); catDelIdx = -1; save(); renderCatManager(); } else { catDelIdx = i; renderCatManager(); setTimeout(() => { catDelIdx = -1; renderCatManager(); }, 3000); } }
+        function hardDeleteTask(i) { if(taskDelIdx === i) { archivedHabits.splice(i, 1); taskDelIdx = -1; save(); renderCatManager(); } else { taskDelIdx = i; renderCatManager(); setTimeout(() => { taskDelIdx = -1; renderCatManager(); }, 3000); } }
+        function save() { localStorage.setItem(KEY+'_cats', JSON.stringify(categories)); localStorage.setItem(KEY+'_tasks', JSON.stringify(habits)); localStorage.setItem(KEY+'_arch_cats', JSON.stringify(archivedCats)); localStorage.setItem(KEY+'_arch_tasks', JSON.stringify(archivedHabits)); localStorage.setItem(KEY+'_hist', JSON.stringify(history)); localStorage.setItem(KEY+'_notes', JSON.stringify(notes)); render(); }
+        function renameCat(id, v) { const c=categories.find(x=>x.id===id); if(c&&v.trim()){c.title=v.trim(); save();} }
+        function restoreCat(i) { categories.push(archivedCats.splice(i, 1)[0]); save(); render(); renderCatManager(); }
+        function restoreTask(i) { habits.push(archivedHabits.splice(i, 1)[0]); save(); render(); renderCatManager(); }
+        function toggleDaily(id) { const now = Date.now(), dK = getDKey(selectedDate); if(!history[dK]) history[dK] = {}; const h = habits.find(x=>x.id===id); const oldRaw = history[dK][id] || 0; if (now - lastClick < 300) { history[dK][id] = 0.1; checkTriggerLogic(id, oldRaw, 0.1, h.target); save(); lastClick = 0; return; } lastClick = now; const newRaw = (oldRaw >= 1) ? 0 : 1; checkTriggerLogic(id, oldRaw, newRaw, h.target); history[dK][id] = newRaw; save(); }
+        function setWeekly(id, n) { const dK = getDKey(selectedDate); if(!history[dK]) history[dK]={}; const h = habits.find(x=>x.id===id); const totalDoneBefore = getWeeklyDone(id); const todayDone = history[dK][id] || 0; const otherDaysDone = totalDoneBefore - todayDone; const targetWeeklyTotal = Math.min(n, h.target); let newValueForToday = Math.max(0, targetWeeklyTotal - otherDaysDone); if (otherDaysDone + todayDone === n && todayDone > 0) { newValueForToday = todayDone - 1; } history[dK][id] = newValueForToday; checkTriggerLogic(id, totalDoneBefore, getWeeklyDone(id), h.target); save(); }
+        function changeAnnual(id, v) { const dK = getDKey(selectedDate); if(!history[dK]) history[dK]={}; const h = habits.find(x => x.id === id); const totalDoneBefore = getAnnualDone(id); const todayDone = history[dK][id] || 0; const otherDaysDone = totalDoneBefore - todayDone; const maxAllowedToday = Math.max(0, h.target - otherDaysDone); const newTodayValue = Math.max(0, Math.min(maxAllowedToday, todayDone + v)); history[dK][id] = newTodayValue; checkTriggerLogic(id, totalDoneBefore, getAnnualDone(id), h.target); save(); }
+        function openNote(id) { currentEditingTaskId = id; const h = habits.find(x=>x.id===id); document.getElementById('noteTaskName').value = h.name; document.getElementById('noteSubtitle').value = h.subtitle || ''; document.getElementById('noteField').value = notes[id] || ''; document.getElementById('noteTargetQty').value = h.target; document.getElementById('noteTypeSelect').value = h.type; const catSel = document.getElementById('noteCatSelect'); catSel.innerHTML = categories.map(c => `<option value="${c.id}" ${c.id===h.cid?'selected':''}>${c.title}</option>`).join(''); const modal = document.getElementById('noteModal'); modal.style.display = ''; modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        function closeNote() { document.getElementById('noteModal').classList.remove('flex'); document.getElementById('noteModal').classList.add('hidden'); }
+        function saveNote() { const h = habits.find(x=>x.id===currentEditingTaskId); const newType = document.getElementById('noteTypeSelect').value; h.name = document.getElementById('noteTaskName').value.trim(); h.subtitle = document.getElementById('noteSubtitle').value.trim(); notes[currentEditingTaskId] = document.getElementById('noteField').value; h.type = newType; h.target = (newType === 'daily') ? 1 : (parseInt(document.getElementById('noteTargetQty').value) || 1); h.cid = document.getElementById('noteCatSelect').value; save(); closeNote(); }
+        function triggerSuccessFX() { confetti({ particleCount: 100, spread: 60, origin: { y: 0.7 }, colors: ['#D1C4BC', '#ffffff'], shapes: ['circle'], scalar: 0.9 }); }
+        function saveTitle() { localStorage.setItem(KEY+'_title', document.getElementById('boTitle').value); }
+        function exportData() { const btn = document.getElementById('aiExportBtn'); const d = {title: document.getElementById('boTitle').value, tasks: habits.map(h=>({name:h.name, rate: Math.min(100, Math.round((getAnnualDone(h.id)/h.target)*100))+'%'}))}; navigator.clipboard.writeText(JSON.stringify(d,null,2)).then(() => { const originalText = btn.innerText; btn.innerText = '已複製'; setTimeout(() => { btn.innerText = originalText; }, 5000); }); }
+        window.onload = init;
+    </script>
+</body>
+</html>
