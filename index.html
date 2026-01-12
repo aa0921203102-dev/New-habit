@@ -490,6 +490,12 @@
         function triggerSuccessFX() { confetti({ particleCount: 100, spread: 60, origin: { y: 0.7 }, colors: ['#D1C4BC', '#ffffff'], shapes: ['circle'], scalar: 0.9 }); }
         function saveTitle() { localStorage.setItem(KEY+'_title', document.getElementById('boTitle').value); }
         function exportData() { const btn = document.getElementById('aiExportBtn'); const d = {title: document.getElementById('boTitle').value, tasks: habits.map(h=>({name:h.name, rate: Math.min(100, Math.round((getAnnualDone(h.id)/h.target)*100))+'%'}))}; navigator.clipboard.writeText(JSON.stringify(d,null,2)).then(() => { const originalText = btn.innerText; btn.innerText = '已複製'; setTimeout(() => { btn.innerText = originalText; }, 5000); }); }
+        
+        // 註冊 Service Worker 以啟動安卓真正的安裝模式 (Hide URL bar)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(() => console.log('Service Worker Registered'));
+        }
+        
         window.onload = init;
     </script>
 </body>
