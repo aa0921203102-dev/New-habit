@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Bo's Strategy</title>
+    <title>我的策略計畫</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4D4642">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Bo Strategy">
+    <meta name="apple-mobile-web-app-title" content="My Strategy">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/5968/5968263.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -145,13 +145,26 @@
                     <div><span class="premium-label">計畫類型</span><select id="noteTypeSelect" class="premium-input-field"><option value="daily">每日原子</option><option value="weekly">每週計畫</option><option value="annual">年度計畫</option></select></div>
                 </div>
                 <div><span class="premium-label">目標指標數 (Target)</span><input type="number" id="noteTargetQty" class="premium-input-field" placeholder="總次數"></div>
+                <div id="taskOrderArea" class="pt-2 border-t border-white/5">
+                    <span class="premium-label">領域內順序調整</span>
+                    <div class="flex flex-col gap-2">
+                        <button id="taskMoveUp" onclick="moveTask(currentEditingTaskId, -1)" class="w-full bg-white/5 border border-white/10 text-white/60 text-[9px] font-black py-2.5 rounded-xl flex items-center justify-center gap-2">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+                            <span id="prevTaskLabel">往上移</span>
+                        </button>
+                        <button id="taskMoveDown" onclick="moveTask(currentEditingTaskId, 1)" class="w-full bg-white/5 border border-white/10 text-white/60 text-[9px] font-black py-2.5 rounded-xl flex items-center justify-center gap-2">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                            <span id="nextTaskLabel">往下移</span>
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="flex flex-col gap-2 mt-6"><button onclick="saveNote()" class="btn-premium-save">SAVE CHANGES</button><button onclick="closeNote()" class="btn-premium-cancel">CANCEL</button></div>
         </div>
     </div>
 
     <div class="safe-container">
-        <header class="mb-6"><span id="topTodayDate" class="today-label"></span><div class="flex justify-between items-end gap-4"><div class="flex-1"><input type="text" id="boTitle" class="main-title" oninput="saveTitle()" placeholder="年度計劃主題"></div><div class="flex items-center gap-3 mb-2 shrink-0"><span class="text-[8px] font-black text-white/30 uppercase tracking-widest">年度達成總率</span><span id="annualRate" class="text-[20px] font-black text-[#D1C4BC]">0%</span></div></div></header>
+        <header class="mb-6"><span id="topTodayDate" class="today-label"></span><div class="flex justify-between items-end gap-4"><div class="flex-1"><input type="text" id="boTitle" class="main-title" oninput="saveTitle()" placeholder="年度計畫主題"></div><div class="flex items-center gap-3 mb-2 shrink-0"><span class="text-[8px] font-black text-white/30 uppercase tracking-widest">年度達成總率</span><span id="annualRate" class="text-[20px] font-black text-[#D1C4BC]">0%</span></div></div></header>
         <div class="date-slider no-scrollbar" id="dateSlider"></div>
         <div class="flex overflow-x-auto gap-3 mb-6 no-scrollbar" id="monthNav"></div>
         <div class="summary-panel">
@@ -182,7 +195,7 @@
                         </div>
                     </div>
                 </div>
-                <p class="text-center text-[7px] text-white/10 py-4 tracking-[0.3em]">VERSION 55.1.1 · 7-DAY BACKUP ALERT</p>
+                <p class="text-center text-[7px] text-white/10 py-4 tracking-[0.3em]">HABIT STRATEGY · PURE EDITION</p>
             </div>
         </details>
 
@@ -205,16 +218,19 @@
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <script>
-        const KEY = 'bo_strategy_pure_v1'; 
+        // 金鑰更換為中性版本，避免與原有數據衝突
+        const KEY = 'habit_strategy_v1'; 
         const MONTHS_EN = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
         
-        let categories = JSON.parse(localStorage.getItem(KEY+'_cats')) || [{id:'c1', title:'核心目標 CORE'}];
+        // 初始數據全部清空
+        let categories = JSON.parse(localStorage.getItem(KEY+'_cats')) || [{id:'c1', title:'核心目標'}];
         let habits = JSON.parse(localStorage.getItem(KEY+'_tasks')) || [];
         let archivedCats = JSON.parse(localStorage.getItem(KEY+'_arch_cats')) || [];
         let archivedHabits = JSON.parse(localStorage.getItem(KEY+'_arch_tasks')) || [];
         let history = JSON.parse(localStorage.getItem(KEY+'_hist')) || {};
         let notes = JSON.parse(localStorage.getItem(KEY+'_notes')) || {};
-        let titleVal = localStorage.getItem(KEY+'_title') || "", currentEditingTaskId = "", newlyAchievedId = null, lastClick = 0;
+        let titleVal = localStorage.getItem(KEY+'_title') || ""; 
+        let currentEditingTaskId = "", newlyAchievedId = null, lastClick = 0;
         let lastTriggerLevel = "";
 
         let nowTime = new Date();
@@ -255,18 +271,14 @@
             const lastExport = localStorage.getItem(KEY + '_last_export');
             const alertEl = document.getElementById('backupAlert');
             if (!lastExport) {
-                alertEl.innerText = "⚠️ 尚未進行過手動備份，建議立即備份數據並寄至 Mail";
+                alertEl.innerText = "⚠️ 建議進行手動備份：點擊下方建立備份代碼";
                 alertEl.classList.remove('hidden');
                 return;
             }
             const diff = Date.now() - parseInt(lastExport);
             const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            if (days >= 7) {
-                alertEl.innerText = `⚠️ 建議手動備份：距離上次備份已過 ${days} 天`;
-                alertEl.classList.remove('hidden');
-            } else {
-                alertEl.classList.add('hidden');
-            }
+            if (days >= 7) { alertEl.innerText = `⚠️ 建議手動備份：距離上次備份已過 ${days} 天`; alertEl.classList.remove('hidden'); } 
+            else { alertEl.classList.add('hidden'); }
         }
 
         function checkRestoreState() {
@@ -274,23 +286,10 @@
             const undoTime = localStorage.getItem(KEY + '_undo_time') || "未知";
             const restoreArea = document.getElementById('restoreArea');
             const restoreBtn = document.getElementById('restoreBtn');
-            const mgmt = document.getElementById('mgmtDetails');
-            
             if (undoData) { 
                 restoreArea.classList.remove('hidden'); 
                 restoreBtn.innerText = "↺ 恢復至上一版本數據";
                 document.getElementById('undoTimeLabel').innerText = `快照時間: ${undoTime}`;
-                if (sessionStorage.getItem('bo_just_restored')) {
-                    restoreBtn.innerText = "恢復成功 ✨";
-                    restoreBtn.style.color = "#D1C4BC";
-                    mgmt.open = true;
-                    setTimeout(() => { 
-                        restoreBtn.innerText = "↺ 切換回原先版本"; 
-                        restoreBtn.style.color = "";
-                        sessionStorage.removeItem('bo_just_restored');
-                    }, 5000);
-                }
-                if(sessionStorage.getItem('bo_just_imported')) { mgmt.open = true; sessionStorage.removeItem('bo_just_imported'); }
             } else { restoreArea.classList.add('hidden'); }
         }
 
@@ -305,8 +304,6 @@
                 localStorage.setItem(KEY+'_cats', d.c); localStorage.setItem(KEY+'_tasks', d.t);
                 localStorage.setItem(KEY+'_hist', d.h); localStorage.setItem(KEY+'_notes', d.n);
                 localStorage.setItem(KEY+'_title', d.l);
-                sessionStorage.setItem('bo_just_restored', 'true');
-                sessionStorage.setItem('bo_just_imported', 'true'); 
                 location.reload();
             } catch(e) { alert("❌ 恢復失敗。"); }
         }
@@ -331,10 +328,10 @@
             const panel = document.getElementById('dockPanel'), content = document.getElementById('panelContent');
             panelOpen = true; panel.classList.add('show');
             if (mode === 'category') {
-                content.innerHTML = `<span class="mgmt-label" style="opacity: 0.3; margin-bottom: 12px;">新增領域</span><div id="panelCatList" class="max-h-52 overflow-y-auto mb-4 space-y-2 no-scrollbar"></div><div class="flex gap-2"><input type="text" id="panelNewCatName" placeholder="新領域..." class="input-glass flex-1"><button onclick="addCatFromPanel()" class="w-10 bg-white rounded-xl text-black font-black">+</button></div>`;
+                content.innerHTML = `<span class="mgmt-label" style="opacity: 0.3; margin-bottom: 12px;">管理領域</span><div id="panelCatList" class="max-h-52 overflow-y-auto mb-4 space-y-2 no-scrollbar"></div><div class="flex gap-2"><input type="text" id="panelNewCatName" placeholder="新領域名稱..." class="input-glass flex-1"><button onclick="addCatFromPanel()" class="w-10 bg-white rounded-xl text-black font-black">+</button></div>`;
                 setTimeout(renderPanelCats, 0);
             } else {
-                content.innerHTML = `<span class="mgmt-label" style="opacity: 0.3; margin-bottom: 12px;">新增小目標</span><div class="space-y-3"><select id="panelCatSelect" class="input-glass">${categories.map(c => `<option value="${c.id}">${c.title}</option>`).join('')}</select><input type="text" id="panelTaskName" placeholder="計畫內容..." class="input-glass"><div class="grid grid-cols-2 gap-2"><select id="panelTaskType" class="input-glass"><option value="daily">每日原子</option><option value="weekly">每週計畫</option><option value="annual">年度計畫</option></select><div><input type="number" id="panelTaskQty" placeholder="次數" class="input-glass text-center"></div></div><button onclick="addTaskFromPanel()" class="panel-btn-main">SAVE MISSION</button></div>`;
+                content.innerHTML = `<span class="mgmt-label" style="opacity: 0.3; margin-bottom: 12px;">新增小目標</span><div class="space-y-3"><select id="panelCatSelect" class="input-glass">${categories.map(c => `<option value="${c.id}">${c.title}</option>`).join('')}</select><input type="text" id="panelTaskName" placeholder="計畫內容..." class="input-glass"><div class="grid grid-cols-2 gap-2"><select id="panelTaskType" class="input-glass"><option value="daily">每日原子</option><option value="weekly">每週計畫</option><option value="annual">年度計畫</option></select><div><input type="number" id="panelTaskQty" placeholder="次數" class="input-glass text-center"></div></div><button onclick="addTaskFromPanel()" class="panel-btn-main">開始新計畫</button></div>`;
             }
         }
         function closePanel() { document.getElementById('dockPanel').classList.remove('show'); panelOpen = false; }
@@ -345,10 +342,9 @@
             const s = btoa(encodeURIComponent(JSON.stringify(b)));
             document.getElementById('transferTypeLabel').innerText = "EXPORT";
             document.getElementById('transferTitle').innerText = "數據備份代碼";
-            document.getElementById('transferDesc').innerText = "💡 建議將代碼寄到 Mail 備存，以免通訊軟體字數限字導致編碼截斷損壞。代碼已複製。";
+            document.getElementById('transferDesc').innerText = "代碼已複製。建議將代碼寄到 Mail 備存。";
             document.getElementById('transferTextArea').value = s;
             document.getElementById('transferTextArea').readOnly = true;
-            
             const actionBtn = document.getElementById('transferActionBtn');
             actionBtn.innerText = "COPY ALL";
             actionBtn.onclick = () => { 
@@ -358,7 +354,6 @@
                 checkBackupReminder();
                 closeTransferModal(); 
             };
-            
             document.getElementById('transferModal').classList.remove('hidden'); document.getElementById('transferModal').classList.add('flex');
             navigator.clipboard.writeText(s).catch(() => {});
         }
@@ -366,7 +361,7 @@
         function openImportModal() {
             document.getElementById('transferTypeLabel').innerText = "IMPORT";
             document.getElementById('transferTitle').innerText = "匯入數據";
-            document.getElementById('transferDesc').innerText = "💡 貼上備份代碼以恢復。匯入前將自動備份，匯入後仍保有恢復上一版的選項。";
+            document.getElementById('transferDesc').innerText = "貼上備份代碼以恢復數據。";
             document.getElementById('transferTextArea').value = "";
             document.getElementById('transferTextArea').readOnly = false;
             const actionBtn = document.getElementById('transferActionBtn');
@@ -375,11 +370,9 @@
                 const s = document.getElementById('transferTextArea').value.trim();
                 try {
                     const d = JSON.parse(decodeURIComponent(atob(s)));
-                    const backup = { c: localStorage.getItem(KEY+'_cats'), t: localStorage.getItem(KEY+'_tasks'), h: localStorage.getItem(KEY+'_hist'), n: localStorage.getItem(KEY+'_notes'), l: localStorage.getItem(KEY+'_title') };
-                    localStorage.setItem(KEY + '_undo', JSON.stringify(backup));
-                    localStorage.setItem(KEY + '_undo_time', new Date().toLocaleTimeString());
-                    sessionStorage.setItem('bo_just_imported', 'true');
-                    localStorage.setItem(KEY+'_cats', d.c); localStorage.setItem(KEY+'_tasks', d.t); localStorage.setItem(KEY+'_hist', d.h); localStorage.setItem(KEY+'_notes', d.n); localStorage.setItem(KEY+'_title', d.l);
+                    localStorage.setItem(KEY+'_cats', d.c); localStorage.setItem(KEY+'_tasks', d.t);
+                    localStorage.setItem(KEY+'_hist', d.h); localStorage.setItem(KEY+'_notes', d.n);
+                    localStorage.setItem(KEY+'_title', d.l);
                     location.reload();
                 } catch(e) { alert("❌ 格式錯誤。"); }
             };
@@ -469,7 +462,37 @@
             if(archTasks) archTasks.innerHTML = archivedHabits.map((h, i) => `<div class="flex justify-between items-center py-2 border-b border-white/5"><span class="text-[10px] text-white/20">${h.name}</span><div class="flex gap-4"><button onclick="restoreTask(${i})" class="text-[8px] text-[#D1C4BC]">還原</button><div onclick="hardDeleteTask(${i})" class="cursor-pointer">${taskDelIdx === i ? '<span class="sure-text">SURE?</span>' : trashSVG}</div></div></div>`).join('');
         }
 
-        function renderPanelCats() { const list = document.getElementById('panelCatList'); if(!list) return; list.innerHTML = categories.map(c => `<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><input type="text" value="${c.title}" onblur="renameCat('${c.id}', this.value)" class="bg-transparent text-[12px] font-bold text-white outline-none w-2/3"><div onclick="archiveCat('${c.id}')" class="${panelCatArchiveId === c.id ? 'sure-text' : 'opacity-20 text-[10px]'}">${panelCatArchiveId === c.id ? 'SURE?' : '✕'}</div></div>`).join(''); }
+        function moveCategory(id, direction) {
+            const index = categories.findIndex(c => c.id === id);
+            if (index < 0) return;
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= categories.length) return;
+            const temp = categories[index];
+            categories[index] = categories[newIndex];
+            categories[newIndex] = temp;
+            save();
+            renderPanelCats();
+        }
+
+        function renderPanelCats() { 
+            const list = document.getElementById('panelCatList'); 
+            if(!list) return; 
+            list.innerHTML = categories.map((c, i) => `
+                <div class="flex items-center justify-between p-1.5 bg-white/5 rounded-xl border border-white/5 mb-1.5">
+                    <div class="flex items-center gap-2.5 flex-1">
+                        <div class="flex flex-col gap-1 opacity-60">
+                            <button onclick="moveCategory('${c.id}', -1)" class="hover:opacity-100 ${i === 0 ? 'invisible' : ''}">
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+                            </button>
+                            <button onclick="moveCategory('${c.id}', 1)" class="hover:opacity-100 ${i === categories.length - 1 ? 'invisible' : ''}">
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                        </div>
+                        <input type="text" value="${c.title}" onblur="renameCat('${c.id}', this.value)" class="bg-transparent text-[11px] font-bold text-white outline-none w-full">
+                    </div>
+                    <div onclick="archiveCat('${c.id}')" class="${panelCatArchiveId === c.id ? 'sure-text' : 'opacity-20 text-[10px] px-1'}">${panelCatArchiveId === c.id ? 'SURE?' : '✕'}</div>
+                </div>`).join(''); 
+        }
         
         function addCatFromPanel() { const n = document.getElementById('panelNewCatName').value.trim(); if(n) { categories.push({id:'c_'+Date.now(), title:n}); save(); document.getElementById('panelNewCatName').value=''; renderPanelCats(); } }
         function addTaskFromPanel() { const n = document.getElementById('panelTaskName').value.trim(), c = document.getElementById('panelCatSelect').value, t = document.getElementById('panelTaskType').value, q = parseInt(document.getElementById('panelTaskQty').value) || 1; if(n) { habits.push({id:'t_'+Date.now(), name:n, subtitle:'', cid:c, type:t, target:(t === 'daily' ? 1 : q)}); save(); closePanel(); } }
@@ -484,14 +507,55 @@
         function toggleDaily(id) { const now = Date.now(), dK = getDKey(selectedDate); if(!history[dK]) history[dK] = {}; const h = habits.find(x=>x.id===id); const oldRaw = history[dK][id] || 0; if (now - lastClick < 300) { history[dK][id] = 0.1; checkTriggerLogic(id, oldRaw, 0.1, h.target); save(); lastClick = 0; return; } lastClick = now; const newRaw = (oldRaw >= 1) ? 0 : 1; checkTriggerLogic(id, oldRaw, newRaw, h.target); history[dK][id] = newRaw; save(); }
         function setWeekly(id, n) { const dK = getDKey(selectedDate); if(!history[dK]) history[dK]={}; const h = habits.find(x=>x.id===id); const totalDoneBefore = getWeeklyDone(id); const todayDone = history[dK][id] || 0; const otherDaysDone = totalDoneBefore - todayDone; const targetWeeklyTotal = Math.min(n, h.target); let newValueForToday = Math.max(0, targetWeeklyTotal - otherDaysDone); if (otherDaysDone + todayDone === n && todayDone > 0) { newValueForToday = todayDone - 1; } history[dK][id] = newValueForToday; checkTriggerLogic(id, totalDoneBefore, getWeeklyDone(id), h.target); save(); }
         function changeAnnual(id, v) { const dK = getDKey(selectedDate); if(!history[dK]) history[dK]={}; const h = habits.find(x => x.id === id); const totalDoneBefore = getAnnualDone(id); const todayDone = history[dK][id] || 0; const otherDaysDone = totalDoneBefore - todayDone; const maxAllowedToday = Math.max(0, h.target - otherDaysDone); const newTodayValue = Math.max(0, Math.min(maxAllowedToday, todayDone + v)); history[dK][id] = newTodayValue; checkTriggerLogic(id, totalDoneBefore, getAnnualDone(id), h.target); save(); }
-        function openNote(id) { currentEditingTaskId = id; const h = habits.find(x=>x.id===id); document.getElementById('noteTaskName').value = h.name; document.getElementById('noteSubtitle').value = h.subtitle || ''; document.getElementById('noteField').value = notes[id] || ''; document.getElementById('noteTargetQty').value = h.target; document.getElementById('noteTypeSelect').value = h.type; const catSel = document.getElementById('noteCatSelect'); catSel.innerHTML = categories.map(c => `<option value="${c.id}" ${c.id===h.cid?'selected':''}>${c.title}</option>`).join(''); const modal = document.getElementById('noteModal'); modal.style.display = ''; modal.classList.remove('hidden'); modal.classList.add('flex'); }
+        
+        function moveTask(id, direction) {
+            const h = habits.find(x => x.id === id);
+            if (!h) return;
+            const sameCatTasks = habits.filter(x => x.cid === h.cid);
+            const idxInCat = sameCatTasks.findIndex(x => x.id === id);
+            const newIdxInCat = idxInCat + direction;
+            if (newIdxInCat < 0 || newIdxInCat >= sameCatTasks.length) return;
+            const targetTask = sameCatTasks[newIdxInCat];
+            const globalIdx = habits.findIndex(x => x.id === id);
+            const targetGlobalIdx = habits.findIndex(x => x.id === targetTask.id);
+            const temp = habits[globalIdx];
+            habits[globalIdx] = habits[targetGlobalIdx];
+            habits[targetGlobalIdx] = temp;
+            save();
+            openNote(id);
+        }
+
+        function openNote(id) { 
+            currentEditingTaskId = id; 
+            const h = habits.find(x=>x.id===id); 
+            document.getElementById('noteTaskName').value = h.name; 
+            document.getElementById('noteSubtitle').value = h.subtitle || ''; 
+            document.getElementById('noteField').value = notes[id] || ''; 
+            document.getElementById('noteTargetQty').value = h.target; 
+            document.getElementById('noteTypeSelect').value = h.type; 
+            const catSel = document.getElementById('noteCatSelect'); 
+            catSel.innerHTML = categories.map(c => `<option value="${c.id}" ${c.id===h.cid?'selected':''}>${c.title}</option>`).join(''); 
+            
+            const sameCatTasks = habits.filter(x => x.cid === h.cid);
+            const idx = sameCatTasks.findIndex(x => x.id === id);
+            const prevT = idx > 0 ? sameCatTasks[idx-1].name : '已是首項';
+            const nextT = idx < sameCatTasks.length - 1 ? sameCatTasks[idx+1].name : '已是末項';
+            
+            document.getElementById('prevTaskLabel').innerText = `上方：${prevT}`;
+            document.getElementById('nextTaskLabel').innerText = `下方：${nextT}`;
+            
+            document.getElementById('taskMoveUp').classList.toggle('invisible', idx === 0);
+            document.getElementById('taskMoveDown').classList.toggle('invisible', idx === sameCatTasks.length - 1);
+            
+            const modal = document.getElementById('noteModal'); 
+            modal.style.display = ''; modal.classList.remove('hidden'); modal.classList.add('flex'); 
+        }
         function closeNote() { document.getElementById('noteModal').classList.remove('flex'); document.getElementById('noteModal').classList.add('hidden'); }
         function saveNote() { const h = habits.find(x=>x.id===currentEditingTaskId); const newType = document.getElementById('noteTypeSelect').value; h.name = document.getElementById('noteTaskName').value.trim(); h.subtitle = document.getElementById('noteSubtitle').value.trim(); notes[currentEditingTaskId] = document.getElementById('noteField').value; h.type = newType; h.target = (newType === 'daily') ? 1 : (parseInt(document.getElementById('noteTargetQty').value) || 1); h.cid = document.getElementById('noteCatSelect').value; save(); closeNote(); }
         function triggerSuccessFX() { confetti({ particleCount: 100, spread: 60, origin: { y: 0.7 }, colors: ['#D1C4BC', '#ffffff'], shapes: ['circle'], scalar: 0.9 }); }
         function saveTitle() { localStorage.setItem(KEY+'_title', document.getElementById('boTitle').value); }
         function exportData() { const btn = document.getElementById('aiExportBtn'); const d = {title: document.getElementById('boTitle').value, tasks: habits.map(h=>({name:h.name, rate: Math.min(100, Math.round((getAnnualDone(h.id)/h.target)*100))+'%'}))}; navigator.clipboard.writeText(JSON.stringify(d,null,2)).then(() => { const originalText = btn.innerText; btn.innerText = '已複製'; setTimeout(() => { btn.innerText = originalText; }, 5000); }); }
         
-        // 註冊 Service Worker 以啟動安卓真正的安裝模式 (Hide URL bar)
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then(() => console.log('Service Worker Registered'));
         }
